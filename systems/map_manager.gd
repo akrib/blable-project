@@ -52,6 +52,11 @@ var player_stats_backup: Dictionary = {}
 func _ready():
 	print("🗺️ MapManager initialisé")
 
+
+func initialize(player: CharacterBody2D):
+	"""initialize"""
+	load_initial_map(player)
+
 func load_initial_map(player: CharacterBody2D):
 	"""Charge la carte initiale (Ville)"""
 	change_map(current_map_id, player)

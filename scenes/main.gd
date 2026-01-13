@@ -1,42 +1,71 @@
-extends Node2D
+extends Node
 
-## Script principal
-## Initialise le MapManager et lance la première carte
+## Script principal du jeu
+## Initialise le MapManager et charge la carte de départ
 
-@onready var player = $Player
-@onready var map_manager = $MapManager
-@onready var global_ui = $GlobalUI
+# Références
+@onready var map_manager: MapManager = $MapManager
+var player: CharacterBody2D = null
 
 func _ready():
-	# Lier le joueur à l'interface globale
-	if global_ui:
-		global_ui.set_player(player)
+	print("=================================")
+	print("🎮 Démarrage du jeu...")
+	print("=================================")
 	
-	# Connexion au signal de mort du joueur
-	player.player_died.connect(_on_player_died)
+	# Vérifier que le MapManager existe
+	if not map_manager:
+		push_error("❌ ERREUR CRITIQUE : MapManager introuvable!")
+		push_error("   → Assure-toi qu'un nœud 'MapManager' existe dans la scène main.tscn")
+		return
 	
-	# Initialiser le MapManager avec la carte de départ
-	map_manager.load_initial_map(player)
+	# Initialiser le MapManager (appeler la fonction initialize si elle existe)
+	if map_manager.has_method("initialize"):
+		map_manager.initialize(player)
+	else:
+		print("⚠️ MapManager n'a pas de méthode 'initialize()', on continue...")
 	
-	# Charger la première carte de façon asynchrone
-	await map_manager.switch_map("map_forest", "portal_to_desert")  # Spawn au portail vers le désert
+	# Attendre un frame pour que tout soit prêt
+	await get_tree().process_frame
 	
-	print("=== RPG Prototype - Système Multi-Cartes ===")
-	print("Utilisez WASD ou les flèches pour vous déplacer")
-	print("Appuyez sur ESPACE pour attaquer")
-	print("Appuyez sur PAGE UP pour ouvrir les stats corporelles")
-	print("Appuyez sur PAGE DOWN pour ouvrir les stats d'attaque")
-	print("")
-	print("🗺️ NOUVEAU : Système de Téléportation et Multi-Cartes!")
-	print("- Entrez dans les PORTAILS colorés pour changer de carte")
-	print("- Vos stats et XP sont PRÉSERVÉS entre les cartes")
-	print("- 3 cartes disponibles : Forêt (verte), Désert (orange), Caverne (violette)")
-	print("- Chaque carte a des ennemis de couleurs différentes")
-	print("- Les ennemis sont plus forts dans le Désert et la Caverne !")
-	print("")
-	print("Explorez les différentes cartes et devenez plus fort!")
+	# Récupérer le joueur
+	player = get_player_reference()
+	
+	if not player:
+		push_error("❌ ERREUR : Joueur introuvable après initialisation!")
+		return
+	
+	# ✅ CORRECTION : Utiliser "change_map" au lieu de "switch_map"
+	# La fonction s'appelle "change_map", pas "switch_map"
+	if map_manager.has_method("load_initial_map"):
+		map_manager.load_initial_map(player)
+	else:
+		# Alternative : appeler directement change_map
+		map_manager.change_map("ville", player)
+	
+	print("✅ Initialisation terminée!")
+	print("=================================")
 
-func _on_player_died():
-	print("Game Over!")
-	await get_tree().create_timer(1.0).timeout
-	get_tree().reload_current_scene()
+func get_player_reference() -> CharacterBody2D:
+	"""Récupère une référence au joueur dans la scène"""
+	
+	# Méthode 1 : Le joueur est un enfant direct de Main
+	var player_node = get_node_or_null("Player")
+	if player_node:
+		print("✅ Joueur trouvé comme enfant de Main")
+		return player_node
+	
+	# Méthode 2 : Le joueur est dans la carte actuelle
+	if map_manager and map_manager.current_map:
+		player_node = map_manager.current_map.get_node_or_null("Player")
+		if player_node:
+			print("✅ Joueur trouvé dans la carte")
+			return player_node
+	
+	# Méthode 3 : Chercher dans toute la scène
+	player_node = get_tree().root.find_child("Player", true, false)
+	if player_node:
+		print("✅ Joueur trouvé dans l'arbre de scène")
+		return player_node
+	
+	push_error("❌ Joueur introuvable dans la scène!")
+	return null
