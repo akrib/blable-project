@@ -128,24 +128,36 @@ func save_player_stats(player: CharacterBody2D):
 	# Stats corporelles
 	var body_stats = player.get_node_or_null("BodyStatsComponent")
 	if body_stats:
-		player_stats_backup["body_level"] = body_stats.level
-		player_stats_backup["body_xp"] = body_stats.current_xp
-		player_stats_backup["body_points"] = body_stats.available_points.duplicate()
-		player_stats_backup["body_stats"] = body_stats.current_stats.duplicate()
+		# ✅ CORRECTION : Ne pas utiliser .duplicate() sur des int
+		player_stats_backup["body_level"] = body_stats.level if "level" in body_stats else 1
+		player_stats_backup["body_xp"] = body_stats.current_xp if "current_xp" in body_stats else 0
+		
+		# ✅ CORRECTION : Vérifier si les propriétés existent avant de les dupliquer
+		if "available_points" in body_stats:
+			player_stats_backup["body_points"] = body_stats.available_points.duplicate() if typeof(body_stats.available_points) == TYPE_DICTIONARY or typeof(body_stats.available_points) == TYPE_ARRAY else body_stats.available_points
+		
+		if "current_stats" in body_stats:
+			player_stats_backup["body_stats"] = body_stats.current_stats.duplicate() if typeof(body_stats.current_stats) == TYPE_DICTIONARY or typeof(body_stats.current_stats) == TYPE_ARRAY else body_stats.current_stats
 	
 	# Stats d'attaque
 	var attack_stats = player.get_node_or_null("AttackStatsComponent")
 	if attack_stats:
-		player_stats_backup["attack_level"] = attack_stats.level
-		player_stats_backup["attack_xp"] = attack_stats.current_xp
-		player_stats_backup["attack_points"] = attack_stats.available_points.duplicate()
-		player_stats_backup["attack_stats"] = attack_stats.current_stats.duplicate()
+		# ✅ CORRECTION : Ne pas utiliser .duplicate() sur des int
+		player_stats_backup["attack_level"] = attack_stats.level if "level" in attack_stats else 1
+		player_stats_backup["attack_xp"] = attack_stats.current_xp if "current_xp" in attack_stats else 0
+		
+		# ✅ CORRECTION : Vérifier si les propriétés existent avant de les dupliquer
+		if "available_points" in attack_stats:
+			player_stats_backup["attack_points"] = attack_stats.available_points.duplicate() if typeof(attack_stats.available_points) == TYPE_DICTIONARY or typeof(attack_stats.available_points) == TYPE_ARRAY else attack_stats.available_points
+		
+		if "current_stats" in attack_stats:
+			player_stats_backup["attack_stats"] = attack_stats.current_stats.duplicate() if typeof(attack_stats.current_stats) == TYPE_DICTIONARY or typeof(attack_stats.current_stats) == TYPE_ARRAY else attack_stats.current_stats
 	
 	# Santé actuelle
 	var health_comp = player.get_node_or_null("HealthComponent")
 	if health_comp:
-		player_stats_backup["current_health"] = health_comp.current_health
-		player_stats_backup["max_health"] = health_comp.max_health
+		player_stats_backup["current_health"] = health_comp.current_health if "current_health" in health_comp else 100.0
+		player_stats_backup["max_health"] = health_comp.max_health if "max_health" in health_comp else 100.0
 
 func restore_player_stats(player: CharacterBody2D):
 	"""Restaure les stats du joueur après changement de carte"""
@@ -156,26 +168,60 @@ func restore_player_stats(player: CharacterBody2D):
 	# Stats corporelles
 	var body_stats = player.get_node_or_null("BodyStatsComponent")
 	if body_stats and player_stats_backup.has("body_level"):
-		body_stats.level = player_stats_backup["body_level"]
-		body_stats.current_xp = player_stats_backup["body_xp"]
-		body_stats.available_points = player_stats_backup["body_points"].duplicate()
-		body_stats.current_stats = player_stats_backup["body_stats"].duplicate()
-		body_stats.apply_all_stats()
+		if "level" in body_stats:
+			body_stats.level = player_stats_backup["body_level"]
+		if "current_xp" in body_stats:
+			body_stats.current_xp = player_stats_backup["body_xp"]
+		
+		# ✅ CORRECTION : Vérifier avant d'assigner
+		if "available_points" in body_stats and player_stats_backup.has("body_points"):
+			if typeof(player_stats_backup["body_points"]) == TYPE_DICTIONARY or typeof(player_stats_backup["body_points"]) == TYPE_ARRAY:
+				body_stats.available_points = player_stats_backup["body_points"].duplicate()
+			else:
+				body_stats.available_points = player_stats_backup["body_points"]
+		
+		if "current_stats" in body_stats and player_stats_backup.has("body_stats"):
+			if typeof(player_stats_backup["body_stats"]) == TYPE_DICTIONARY or typeof(player_stats_backup["body_stats"]) == TYPE_ARRAY:
+				body_stats.current_stats = player_stats_backup["body_stats"].duplicate()
+			else:
+				body_stats.current_stats = player_stats_backup["body_stats"]
+		
+		# ✅ CORRECTION : Vérifier si la méthode existe
+		if body_stats.has_method("apply_all_stats"):
+			body_stats.apply_all_stats()
 	
 	# Stats d'attaque
 	var attack_stats = player.get_node_or_null("AttackStatsComponent")
 	if attack_stats and player_stats_backup.has("attack_level"):
-		attack_stats.level = player_stats_backup["attack_level"]
-		attack_stats.current_xp = player_stats_backup["attack_xp"]
-		attack_stats.available_points = player_stats_backup["attack_points"].duplicate()
-		attack_stats.current_stats = player_stats_backup["attack_stats"].duplicate()
-		attack_stats.apply_all_stats()
+		if "level" in attack_stats:
+			attack_stats.level = player_stats_backup["attack_level"]
+		if "current_xp" in attack_stats:
+			attack_stats.current_xp = player_stats_backup["attack_xp"]
+		
+		# ✅ CORRECTION : Vérifier avant d'assigner
+		if "available_points" in attack_stats and player_stats_backup.has("attack_points"):
+			if typeof(player_stats_backup["attack_points"]) == TYPE_DICTIONARY or typeof(player_stats_backup["attack_points"]) == TYPE_ARRAY:
+				attack_stats.available_points = player_stats_backup["attack_points"].duplicate()
+			else:
+				attack_stats.available_points = player_stats_backup["attack_points"]
+		
+		if "current_stats" in attack_stats and player_stats_backup.has("attack_stats"):
+			if typeof(player_stats_backup["attack_stats"]) == TYPE_DICTIONARY or typeof(player_stats_backup["attack_stats"]) == TYPE_ARRAY:
+				attack_stats.current_stats = player_stats_backup["attack_stats"].duplicate()
+			else:
+				attack_stats.current_stats = player_stats_backup["attack_stats"]
+		
+		# ✅ CORRECTION : Vérifier si la méthode existe
+		if attack_stats.has_method("apply_all_stats"):
+			attack_stats.apply_all_stats()
 	
 	# Santé
 	var health_comp = player.get_node_or_null("HealthComponent")
 	if health_comp and player_stats_backup.has("current_health"):
-		health_comp.max_health = player_stats_backup["max_health"]
-		health_comp.current_health = player_stats_backup["current_health"]
+		if "max_health" in health_comp:
+			health_comp.max_health = player_stats_backup["max_health"]
+		if "current_health" in health_comp:
+			health_comp.current_health = player_stats_backup["current_health"]
 
 func update_map_ui(map_id: String):
 	"""Met à jour l'interface pour afficher le nom de la carte"""
