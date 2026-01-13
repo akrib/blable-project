@@ -1,0 +1,84 @@
+{
+  "enemy_types": {
+    "warrior": {
+      "name": "Guerrier",
+      "description": "Ennemi équilibré, donne plus d'XP corporelle",
+      "health": 50,
+      "speed": 70,
+      "damage": 8,
+      "color": [1.0, 0.3, 0.3],
+      "body_xp": 15,
+      "attack_xp": 5,
+      "visual_note": "Rectangle rouge standard"
+    },
+    "mage": {
+      "name": "Mage",
+      "description": "Ennemi faible mais rapide, donne plus d'XP d'attaque",
+      "health": 30,
+      "speed": 100,
+      "damage": 12,
+      "color": [0.5, 0.3, 1.0],
+      "body_xp": 5,
+      "attack_xp": 20,
+      "visual_note": "Rectangle violet"
+    },
+    "tank": {
+      "name": "Tank",
+      "description": "Ennemi lent et résistant, donne beaucoup d'XP corporelle",
+      "health": 100,
+      "speed": 40,
+      "damage": 15,
+      "color": [0.6, 0.6, 0.2],
+      "body_xp": 30,
+      "attack_xp": 3,
+      "visual_note": "Rectangle jaune-marron"
+    },
+    "assassin": {
+      "name": "Assassin",
+      "description": "Ennemi très rapide et fragile, XP équilibrée",
+      "health": 25,
+      "speed": 150,
+      "damage": 20,
+      "color": [0.2, 0.2, 0.2],
+      "body_xp": 10,
+      "attack_xp": 10,
+      "visual_note": "Rectangle noir/gris foncé"
+    },
+    "elemental": {
+      "name": "Élémentaire",
+      "description": "Ennemi élémentaire, excellent pour farm XP d'attaque",
+      "health": 40,
+      "speed": 80,
+      "damage": 10,
+      "color": [0.3, 0.8, 1.0],
+      "body_xp": 3,
+      "attack_xp": 25,
+      "visual_note": "Rectangle cyan/bleu clair"
+    },
+    "boss_mini": {
+      "name": "Mini-Boss",
+      "description": "Petit boss, grosse récompense dans les deux catégories",
+      "health": 150,
+      "speed": 60,
+      "damage": 25,
+      "color": [1.0, 0.5, 0.0],
+      "body_xp": 50,
+      "attack_xp": 50,
+      "visual_note": "Rectangle orange, plus grand"
+    }
+  },
+  "spawn_recommendations": {
+    "farming_body_xp": ["warrior", "tank", "boss_mini"],
+    "farming_attack_xp": ["mage", "elemental", "boss_mini"],
+    "balanced": ["warrior", "assassin", "boss_mini"],
+    "challenge": ["assassin", "mage", "elemental"]
+  },
+  "constants": {
+    "body_stats_points_per_level": 5,
+    "attack_stats_points_per_level": 3,
+    "body_xp_base": 100,
+    "attack_xp_base": 80,
+    "body_xp_multiplier": 1.5,
+    "attack_xp_multiplier": 1.4
+  }
+}

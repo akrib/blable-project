@@ -1,0 +1,46 @@
+{
+  "enemies": {
+    "goblin": {
+      "name": "Goblin",
+      "health": 50,
+      "speed": 80,
+      "damage": 10,
+      "detection_range": 150,
+      "attack_range": 35,
+      "color": [1.0, 0.3, 0.3],
+      "xp_reward": 10
+    },
+    "orc": {
+      "name": "Orc",
+      "health": 100,
+      "speed": 60,
+      "damage": 20,
+      "detection_range": 200,
+      "attack_range": 40,
+      "color": [0.8, 0.2, 0.2],
+      "xp_reward": 25
+    },
+    "slime": {
+      "name": "Slime",
+      "health": 30,
+      "speed": 40,
+      "damage": 5,
+      "detection_range": 100,
+      "attack_range": 30,
+      "color": [0.3, 1.0, 0.3],
+      "xp_reward": 5
+    }
+  },
+  "player": {
+    "starting_health": 100,
+    "speed": 150,
+    "base_damage": 15,
+    "attack_range": 35
+  },
+  "game_settings": {
+    "camera_smoothing": true,
+    "camera_smoothing_speed": 5.0,
+    "invincibility_duration": 0.5,
+    "knockback_force": 150.0
+  }
+}
