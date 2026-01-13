@@ -16,7 +16,7 @@ func _ready():
 	player.player_died.connect(_on_player_died)
 	
 	# Initialiser le MapManager avec la carte de départ
-	map_manager.initialize("map_forest", player)
+	map_manager.load_initial_map(player)
 	
 	# Charger la première carte de façon asynchrone
 	await map_manager.switch_map("map_forest", "portal_to_desert")  # Spawn au portail vers le désert

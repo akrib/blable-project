@@ -1,6 +1,11 @@
 extends Node
 class_name BodyStatsComponent
 
+
+@export var max_health: float = 100.0
+@export var current_health: float = 100.0
+@export var level: int = 1  # ← Ajoute cette ligne
+
 ## Composant de statistiques corporelles
 ## Gère les stats physiques du personnage et leur amélioration
 

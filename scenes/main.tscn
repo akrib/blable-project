@@ -1,17 +1,16 @@
-[gd_scene load_steps=5 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=7 format=3 uid="uid://b28tn18dcp46k"]
 
-[ext_resource type="Script" path="res://scenes/main.gd" id="0"]
-[ext_resource type="PackedScene" uid="uid://player_scene" path="res://scenes/player.tscn" id="1"]
-[ext_resource type="Script" path="res://systems/map_manager.gd" id="2"]
-[ext_resource type="Script" path="res://systems/global_ui.gd" id="3"]
-[ext_resource type="Script" path="res://systems/body_stats_ui.gd" id="4"]
-[ext_resource type="Script" path="res://systems/attack_stats_ui.gd" id="5"]
+[ext_resource type="Script" uid="uid://d111bxc3uvcke" path="res://scenes/main.gd" id="0"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
+[ext_resource type="Script" uid="uid://dujsjojs0pso7" path="res://systems/map_manager.gd" id="2"]
+[ext_resource type="Script" uid="uid://bgopkir5xk7vv" path="res://systems/global_ui.gd" id="3"]
+[ext_resource type="Script" uid="uid://dritenpsfshe4" path="res://systems/body_stats_ui.gd" id="4"]
+[ext_resource type="Script" uid="uid://cggwp0mf8cfes" path="res://systems/attack_stats_ui.gd" id="5"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("0")
 
 [node name="Player" parent="." instance=ExtResource("1")]
-position = Vector2(0, 0)
 
 [node name="MapManager" type="Node" parent="."]
 script = ExtResource("2")
