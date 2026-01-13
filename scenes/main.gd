@@ -5,23 +5,21 @@ extends Node2D
 
 @onready var player = $Player
 @onready var map_manager = $MapManager
-@onready var body_stats_ui = $BodyStatsUI
-@onready var attack_stats_ui = $AttackStatsUI
+@onready var global_ui = $GlobalUI
 
 func _ready():
-	# Lier les interfaces de stats au joueur
-	if body_stats_ui and player.body_stats:
-		body_stats_ui.set_body_stats(player.body_stats)
-	
-	if attack_stats_ui and player.attack_stats:
-		attack_stats_ui.set_attack_stats(player.attack_stats)
+	# Lier le joueur à l'interface globale
+	if global_ui:
+		global_ui.set_player(player)
 	
 	# Connexion au signal de mort du joueur
 	player.player_died.connect(_on_player_died)
 	
 	# Initialiser le MapManager avec la carte de départ
 	map_manager.initialize("map_forest", player)
-	map_manager.switch_map("map_forest", "portal_to_desert")  # Spawn au portail vers le désert
+	
+	# Charger la première carte de façon asynchrone
+	await map_manager.switch_map("map_forest", "portal_to_desert")  # Spawn au portail vers le désert
 	
 	print("=== RPG Prototype - Système Multi-Cartes ===")
 	print("Utilisez WASD ou les flèches pour vous déplacer")

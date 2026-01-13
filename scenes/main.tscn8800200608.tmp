@@ -1,0 +1,183 @@
+[gd_scene load_steps=6 format=3 uid="uid://5hpt0g85nyef"]
+
+[ext_resource type="Script" uid="uid://d111bxc3uvcke" path="res://scenes/main.gd" id="0"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
+[ext_resource type="Script" uid="uid://dujsjojs0pso7" path="res://systems/map_manager.gd" id="2"]
+[ext_resource type="Script" uid="uid://dritenpsfshe4" path="res://systems/body_stats_ui.gd" id="3"]
+[ext_resource type="Script" uid="uid://cggwp0mf8cfes" path="res://systems/attack_stats_ui.gd" id="4"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("0")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+
+[node name="MapManager" type="Node" parent="."]
+script = ExtResource("2")
+
+[node name="BodyStatsUI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3")
+
+[node name="Panel" type="ColorRect" parent="BodyStatsUI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="BodyStatsUI/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="BodyStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Statistiques Corporelles"
+horizontal_alignment = 1
+
+[node name="LevelInfo" type="Label" parent="BodyStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Niveau: 1"
+horizontal_alignment = 1
+
+[node name="PointsAvailable" type="Label" parent="BodyStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Points Disponibles: 0"
+horizontal_alignment = 1
+
+[node name="XPBar" type="ColorRect" parent="BodyStatsUI/Panel/VBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="Fill" type="ColorRect" parent="BodyStatsUI/Panel/VBox/XPBar"]
+layout_mode = 0
+offset_right = 200.0
+offset_bottom = 30.0
+
+[node name="Label" type="Label" parent="BodyStatsUI/Panel/VBox/XPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "0 / 100 XP"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StatsScroll" type="ScrollContainer" parent="BodyStatsUI/Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StatsContainer" type="VBoxContainer" parent="BodyStatsUI/Panel/VBox/StatsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="BodyStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Fermer"
+
+[node name="ResetButton" type="Button" parent="BodyStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Réinitialiser"
+
+[node name="AttackStatsUI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4")
+
+[node name="Panel" type="ColorRect" parent="AttackStatsUI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="AttackStatsUI/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="AttackStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Statistiques d'Attaque"
+horizontal_alignment = 1
+
+[node name="LevelInfo" type="Label" parent="AttackStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Niveau: 1"
+horizontal_alignment = 1
+
+[node name="PointsAvailable" type="Label" parent="AttackStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Points Disponibles: 0"
+horizontal_alignment = 1
+
+[node name="XPBar" type="ColorRect" parent="AttackStatsUI/Panel/VBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="Fill" type="ColorRect" parent="AttackStatsUI/Panel/VBox/XPBar"]
+layout_mode = 0
+offset_right = 200.0
+offset_bottom = 30.0
+
+[node name="Label" type="Label" parent="AttackStatsUI/Panel/VBox/XPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "0 / 80 XP"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StatsScroll" type="ScrollContainer" parent="AttackStatsUI/Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StatsContainer" type="VBoxContainer" parent="AttackStatsUI/Panel/VBox/StatsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PreviewArea" type="ColorRect" parent="AttackStatsUI/Panel/VBox"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="AttackStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Fermer"
+
+[node name="ResetButton" type="Button" parent="AttackStatsUI/Panel/VBox"]
+layout_mode = 2
+text = "Réinitialiser"

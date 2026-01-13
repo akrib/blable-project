@@ -46,7 +46,7 @@ func switch_map(target_map_name: String, target_portal_id: String) -> void:
 		_unload_current_map()
 	
 	# Charger la nouvelle carte
-	_load_map(target_map_name, target_portal_id)
+	await _load_map(target_map_name, target_portal_id)
 	
 	current_map_name = target_map_name
 	map_changed.emit(old_map_name, target_map_name)
@@ -58,7 +58,12 @@ func _load_map(map_name: String, spawn_portal_id: String):
 	
 	if map_scene:
 		current_map = map_scene.instantiate()
-		get_tree().root.add_child(current_map)
+		
+		# Utiliser call_deferred pour éviter l'erreur de "busy setting up children"
+		get_tree().root.call_deferred("add_child", current_map)
+		
+		# Attendre que la carte soit bien ajoutée avant de continuer
+		await get_tree().process_frame
 		
 		# Positionner le joueur au portail de destination
 		_spawn_player_at_portal(spawn_portal_id)
@@ -82,6 +87,10 @@ func _unload_current_map():
 func _spawn_player_at_portal(portal_id: String):
 	if not current_map or not player:
 		return
+	
+	# Retirer le joueur de son parent actuel si nécessaire
+	if player.get_parent():
+		player.get_parent().remove_child(player)
 	
 	# Chercher le portail de spawn
 	var spawn_portal = _find_portal_by_id(portal_id)
@@ -114,6 +123,15 @@ func _spawn_player_at_portal(portal_id: String):
 		current_map.add_child(player)
 		player.global_position = Vector2.ZERO
 		_restore_player_data()
+		
+		# Mettre à jour la caméra et le HUD même sans portail
+		var camera = current_map.get_node_or_null("Camera2D")
+		if camera and camera.has_method("set_target"):
+			camera.set_target(player)
+		
+		var hud = current_map.get_node_or_null("HUD")
+		if hud and hud.has_method("set_player"):
+			hud.set_player(player)
 
 ## Trouver un portail par son ID
 func _find_portal_by_id(portal_id: String) -> Portal:
@@ -129,9 +147,10 @@ func _find_portal_by_id(portal_id: String) -> Portal:
 
 ## Obtenir tous les portails de la carte actuelle
 func _get_all_portals() -> Array:
-	if not current_map:
-		return []
-	return _find_nodes_of_type(current_map, "Portal")
+	var portals = []
+	if current_map:
+		portals = _find_nodes_of_type(current_map, "Portal")
+	return portals
 
 ## Trouver tous les nœuds d'un type donné
 func _find_nodes_of_type(node: Node, class_id: String) -> Array:
@@ -139,10 +158,10 @@ func _find_nodes_of_type(node: Node, class_id: String) -> Array:
 
 	if node.is_class(class_id):
 		result.append(node)
-	
+
 	for child in node.get_children():
 		result.append_array(_find_nodes_of_type(child, class_id))
-	
+
 	return result
 
 ## Connecter tous les portails de la carte actuelle
@@ -155,7 +174,7 @@ func _connect_portals():
 
 ## Callback quand un portail est activé
 func _on_portal_activated(portal: Portal):
-	switch_map(portal.target_map, portal.target_portal_id)
+	await switch_map(portal.target_map, portal.target_portal_id)
 
 ## Sauvegarder les données du joueur
 func _save_player_data():

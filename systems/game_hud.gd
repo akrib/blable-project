@@ -156,11 +156,13 @@ func _show_level_up_notification(type: String, level: int, points: int):
 	tween.tween_callback(label.queue_free)
 
 func _on_body_stats_button_pressed():
-	var body_ui = get_node_or_null("../BodyStatsUI")
-	if body_ui:
-		body_ui.open()
+	# Chercher le GlobalUI dans la scène
+	var global_ui = get_tree().root.get_node_or_null("Main/GlobalUI")
+	if global_ui and global_ui.has_method("open_body_stats"):
+		global_ui.open_body_stats()
 
 func _on_attack_stats_button_pressed():
-	var attack_ui = get_node_or_null("../AttackStatsUI")
-	if attack_ui:
-		attack_ui.open()
+	# Chercher le GlobalUI dans la scène
+	var global_ui = get_tree().root.get_node_or_null("Main/GlobalUI")
+	if global_ui and global_ui.has_method("open_attack_stats"):
+		global_ui.open_attack_stats()
