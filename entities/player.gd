@@ -170,4 +170,9 @@ func _on_direction_changed(direction: Vector2):
 
 func _on_died():
 	player_died.emit()
-	queue_free()
+	
+	var map_manager = get_tree().root.get_node_or_null("Main/MapManager")
+	if map_manager:
+		map_manager.respawn_player_in_ville(self)
+	else:
+		queue_free()

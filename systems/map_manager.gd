@@ -1,243 +1,203 @@
 extends Node
 class_name MapManager
 
-## Gestionnaire de cartes
-## Gère le chargement/déchargement des cartes et la transition entre elles
+## Gestionnaire de cartes avec support de la Ville (spawn/safe zone)
 
-signal map_changed(old_map: String, new_map: String)
-signal map_loaded(map_name: String)
+signal map_changed(map_id: String)
+signal map_ready()
 
-var current_map: Node2D = null
-var current_map_name: String = ""
-var player: Player = null
-
-# Stockage de l'état du joueur entre les cartes
-var player_data: Dictionary = {}
-
-# Référence aux scènes de cartes
-var map_scenes: Dictionary = {
-	"map_forest": "res://scenes/maps/map_forest.tscn",
-	"map_desert": "res://scenes/maps/map_desert.tscn",
-	"map_cave": "res://scenes/maps/map_cave.tscn"
+const MAP_DEFINITIONS = {
+	"ville": {
+		"name": "Ville",
+		"display_name": "🏘️ VILLE - ZONE SÛRE",
+		"scene_path": "res://maps/ville_map.tscn",
+		"spawn_position": Vector2(0, 0),
+		"background_color": Color(0.3, 0.35, 0.45),
+		"is_safe_zone": true,
+		"description": "Zone de départ sans ennemis"
+	},
+	"forest": {
+		"name": "Forêt",
+		"display_name": "🌲 FORÊT VERTE",
+		"scene_path": "res://maps/forest_map.tscn",
+		"spawn_position": Vector2(0, 0),
+		"background_color": Color(0.15, 0.25, 0.15),
+		"enemy_count": 5,
+		"difficulty": 1
+	},
+	"desert": {
+		"name": "Désert",
+		"display_name": "🏜️ DÉSERT DORÉ",
+		"scene_path": "res://maps/desert_map.tscn",
+		"spawn_position": Vector2(0, 0),
+		"background_color": Color(0.9, 0.73, 0.3),
+		"enemy_count": 6,
+		"difficulty": 2
+	},
+	"cavern": {
+		"name": "Caverne",
+		"display_name": "🕳️ CAVERNE SOMBRE",
+		"scene_path": "res://maps/cavern_map.tscn",
+		"spawn_position": Vector2(0, 0),
+		"background_color": Color(0.2, 0.15, 0.25),
+		"enemy_count": 7,
+		"difficulty": 3
+	}
 }
 
+var current_map_id: String = "ville"  # Démarrer en ville
+var current_map: Node2D = null
+var player_stats_backup: Dictionary = {}
+
 func _ready():
-	pass
+	print("🗺️ MapManager initialisé")
 
-## Initialiser avec la carte de départ et le joueur
-func initialize(starting_map: String, starting_player: Player):
-	player = starting_player
-	current_map_name = starting_map
-	_save_player_data()
+func load_initial_map(player: CharacterBody2D):
+	"""Charge la carte initiale (Ville)"""
+	change_map(current_map_id, player)
 
-## Changer de carte
-func switch_map(target_map_name: String, target_portal_id: String) -> void:
-	if not map_scenes.has(target_map_name):
-		push_error("Map not found: " + target_map_name)
+func change_map(map_id: String, player: CharacterBody2D):
+	"""Change la carte actuelle et téléporte le joueur"""
+	
+	if not MAP_DEFINITIONS.has(map_id):
+		push_error("❌ Carte inconnue: " + map_id)
 		return
 	
-	# Sauvegarder l'état du joueur
-	_save_player_data()
+	print("🗺️ Changement de carte: ", current_map_id, " → ", map_id)
 	
-	var old_map_name = current_map_name
+	# Sauvegarder les stats du joueur
+	save_player_stats(player)
 	
 	# Décharger l'ancienne carte
 	if current_map:
-		_unload_current_map()
-	
-	# Charger la nouvelle carte
-	await _load_map(target_map_name, target_portal_id)
-	
-	current_map_name = target_map_name
-	map_changed.emit(old_map_name, target_map_name)
-
-## Charger une carte
-func _load_map(map_name: String, spawn_portal_id: String):
-	var map_scene_path = map_scenes[map_name]
-	var map_scene = load(map_scene_path)
-	
-	if map_scene:
-		current_map = map_scene.instantiate()
-		
-		# Utiliser call_deferred pour éviter l'erreur de "busy setting up children"
-		get_tree().root.call_deferred("add_child", current_map)
-		
-		# Attendre que la carte soit bien ajoutée avant de continuer
-		await get_tree().process_frame
-		
-		# Positionner le joueur au portail de destination
-		_spawn_player_at_portal(spawn_portal_id)
-		
-		# Connecter les portails de cette carte
-		_connect_portals()
-		
-		map_loaded.emit(map_name)
-
-## Décharger la carte actuelle
-func _unload_current_map():
-	if current_map:
-		# Retirer le joueur de la carte avant de la supprimer
-		if player and player.get_parent() == current_map:
-			current_map.remove_child(player)
-		
 		current_map.queue_free()
 		current_map = null
-
-## Placer le joueur à un portail spécifique
-func _spawn_player_at_portal(portal_id: String):
-	if not current_map or not player:
+	
+	# Charger la nouvelle carte
+	var map_def = MAP_DEFINITIONS[map_id]
+	var map_scene = load(map_def["scene_path"])
+	
+	if not map_scene:
+		push_error("❌ Impossible de charger la scène: " + map_def["scene_path"])
 		return
 	
-	# Retirer le joueur de son parent actuel si nécessaire
-	if player.get_parent():
-		player.get_parent().remove_child(player)
+	current_map = map_scene.instantiate()
+	current_map_id = map_id
 	
-	# Chercher le portail de spawn
-	var spawn_portal = _find_portal_by_id(portal_id)
+	# Ajouter la carte à la scène
+	get_parent().add_child(current_map)
 	
-	if spawn_portal:
-		# Ajouter le joueur à la carte
-		current_map.add_child(player)
-		
-		# Positionner le joueur sur le portail
-		player.global_position = spawn_portal.global_position
-		
-		# Restaurer les données du joueur
-		_restore_player_data()
-		
-		# Désactiver temporairement le portail pour éviter la retéléportation
-		spawn_portal.disable_temporarily(1.0)
-		
-		# Mettre à jour la caméra
-		var camera = current_map.get_node_or_null("Camera2D")
-		if camera and camera.has_method("set_target"):
-			camera.set_target(player)
-		
-		# Mettre à jour le HUD
-		var hud = current_map.get_node_or_null("HUD")
-		if hud and hud.has_method("set_player"):
-			hud.set_player(player)
+	# Restaurer les stats du joueur
+	restore_player_stats(player)
+	
+	# Positionner le joueur
+	var spawn_pos = map_def.get("spawn_position", Vector2.ZERO)
+	if current_map.has_method("get_spawn_position"):
+		spawn_pos = current_map.get_spawn_position()
+	
+	player.global_position = spawn_pos
+	
+	# Mettre à jour l'UI
+	update_map_ui(map_id)
+	
+	# Émettre le signal
+	map_changed.emit(map_id)
+	map_ready.emit()
+	
+	# Log
+	if map_def.get("is_safe_zone", false):
+		print("✅ Entré dans la zone sûre: ", map_def["display_name"])
 	else:
-		push_warning("Spawn portal not found: " + portal_id)
-		# Position par défaut
-		current_map.add_child(player)
-		player.global_position = Vector2.ZERO
-		_restore_player_data()
-		
-		# Mettre à jour la caméra et le HUD même sans portail
-		var camera = current_map.get_node_or_null("Camera2D")
-		if camera and camera.has_method("set_target"):
-			camera.set_target(player)
-		
-		var hud = current_map.get_node_or_null("HUD")
-		if hud and hud.has_method("set_player"):
-			hud.set_player(player)
+		print("⚔️ Entré dans: ", map_def["display_name"], " (Difficulté: ", map_def.get("difficulty", 0), ")")
 
-## Trouver un portail par son ID
-func _find_portal_by_id(portal_id: String) -> Portal:
-	if not current_map:
-		return null
+func respawn_player_in_ville(player: CharacterBody2D):
+	"""Téléporte le joueur en ville (après la mort)"""
+	print("💀 Respawn du joueur en ville")
 	
-	var portals = _get_all_portals()
-	for portal in portals:
-		if portal.portal_id == portal_id:
-			return portal
+	# Restaurer la santé complète
+	var health_comp = player.get_node_or_null("HealthComponent")
+	if health_comp:
+		health_comp.heal(health_comp.max_health)
 	
-	return null
+	# Téléporter en ville
+	change_map("ville", player)
 
-## Obtenir tous les portails de la carte actuelle
-func _get_all_portals() -> Array:
-	var portals = []
-	if current_map:
-		portals = _find_nodes_of_type(current_map, "Portal")
-	return portals
-
-## Trouver tous les nœuds d'un type donné
-func _find_nodes_of_type(node: Node, class_id: String) -> Array:
-	var result := []
-
-	if node.is_class(class_id):
-		result.append(node)
-
-	for child in node.get_children():
-		result.append_array(_find_nodes_of_type(child, class_id))
-
-	return result
-
-## Connecter tous les portails de la carte actuelle
-func _connect_portals():
-	var portals = _get_all_portals()
+func save_player_stats(player: CharacterBody2D):
+	"""Sauvegarde les stats du joueur avant changement de carte"""
 	
-	for portal in portals:
-		if not portal.player_entered_portal.is_connected(_on_portal_activated):
-			portal.player_entered_portal.connect(_on_portal_activated)
-
-## Callback quand un portail est activé
-func _on_portal_activated(portal: Portal):
-	await switch_map(portal.target_map, portal.target_portal_id)
-
-## Sauvegarder les données du joueur
-func _save_player_data():
-	if not player:
-		return
+	# Stats corporelles
+	var body_stats = player.get_node_or_null("BodyStatsComponent")
+	if body_stats:
+		player_stats_backup["body_level"] = body_stats.level
+		player_stats_backup["body_xp"] = body_stats.current_xp
+		player_stats_backup["body_points"] = body_stats.available_points.duplicate()
+		player_stats_backup["body_stats"] = body_stats.current_stats.duplicate()
 	
-	player_data = {
-		"position": player.global_position,
-		
-		# Stats corporelles
-		"body_level": player.body_stats.current_level,
-		"body_xp": player.body_stats.current_xp,
-		"body_available_points": player.body_stats.available_points,
-		"body_stats": player.body_stats.stats.duplicate(),
-		
-		# Stats d'attaque
-		"attack_level": player.attack_stats.current_level,
-		"attack_xp": player.attack_stats.current_xp,
-		"attack_available_points": player.attack_stats.available_points,
-		"attack_stats": player.attack_stats.stats.duplicate(),
-		
-		# Santé actuelle
-		"current_health": player.health_component.current_health,
-		"max_health": player.health_component.max_health
-	}
+	# Stats d'attaque
+	var attack_stats = player.get_node_or_null("AttackStatsComponent")
+	if attack_stats:
+		player_stats_backup["attack_level"] = attack_stats.level
+		player_stats_backup["attack_xp"] = attack_stats.current_xp
+		player_stats_backup["attack_points"] = attack_stats.available_points.duplicate()
+		player_stats_backup["attack_stats"] = attack_stats.current_stats.duplicate()
+	
+	# Santé actuelle
+	var health_comp = player.get_node_or_null("HealthComponent")
+	if health_comp:
+		player_stats_backup["current_health"] = health_comp.current_health
+		player_stats_backup["max_health"] = health_comp.max_health
 
-## Restaurer les données du joueur
-func _restore_player_data():
-	if not player or player_data.is_empty():
+func restore_player_stats(player: CharacterBody2D):
+	"""Restaure les stats du joueur après changement de carte"""
+	
+	if player_stats_backup.is_empty():
 		return
 	
 	# Stats corporelles
-	player.body_stats.current_level = player_data.get("body_level", 1)
-	player.body_stats.current_xp = player_data.get("body_xp", 0)
-	player.body_stats.available_points = player_data.get("body_available_points", 0)
-	player.body_stats.stats = player_data.get("body_stats", {}).duplicate()
+	var body_stats = player.get_node_or_null("BodyStatsComponent")
+	if body_stats and player_stats_backup.has("body_level"):
+		body_stats.level = player_stats_backup["body_level"]
+		body_stats.current_xp = player_stats_backup["body_xp"]
+		body_stats.available_points = player_stats_backup["body_points"].duplicate()
+		body_stats.current_stats = player_stats_backup["body_stats"].duplicate()
+		body_stats.apply_all_stats()
 	
 	# Stats d'attaque
-	player.attack_stats.current_level = player_data.get("attack_level", 1)
-	player.attack_stats.current_xp = player_data.get("attack_xp", 0)
-	player.attack_stats.available_points = player_data.get("attack_available_points", 0)
-	player.attack_stats.stats = player_data.get("attack_stats", {}).duplicate()
+	var attack_stats = player.get_node_or_null("AttackStatsComponent")
+	if attack_stats and player_stats_backup.has("attack_level"):
+		attack_stats.level = player_stats_backup["attack_level"]
+		attack_stats.current_xp = player_stats_backup["attack_xp"]
+		attack_stats.available_points = player_stats_backup["attack_points"].duplicate()
+		attack_stats.current_stats = player_stats_backup["attack_stats"].duplicate()
+		attack_stats.apply_all_stats()
 	
 	# Santé
-	player.health_component.current_health = player_data.get("current_health", 50)
-	player.health_component.max_health = player_data.get("max_health", 50)
-	
-	# Appliquer les stats
-	player._apply_body_stats()
-	player._apply_attack_stats()
-	
-	# Émettre les signaux pour mettre à jour l'UI
-	player.body_stats.stats_changed.emit()
-	player.attack_stats.stats_changed.emit()
-	player.health_component.health_changed.emit(
-		player.health_component.current_health,
-		player.health_component.max_health
-	)
+	var health_comp = player.get_node_or_null("HealthComponent")
+	if health_comp and player_stats_backup.has("current_health"):
+		health_comp.max_health = player_stats_backup["max_health"]
+		health_comp.current_health = player_stats_backup["current_health"]
 
-## Obtenir la carte actuelle
-func get_current_map() -> Node2D:
-	return current_map
+func update_map_ui(map_id: String):
+	"""Met à jour l'interface pour afficher le nom de la carte"""
+	var hud = get_tree().root.get_node_or_null("Main/GameHUD")
+	if hud and hud.has_method("update_map_name"):
+		var map_name = MAP_DEFINITIONS[map_id]["name"]
+		hud.update_map_name(map_name)
 
-## Obtenir le nom de la carte actuelle
 func get_current_map_name() -> String:
-	return current_map_name
+	"""Retourne le nom de la carte actuelle"""
+	if MAP_DEFINITIONS.has(current_map_id):
+		return MAP_DEFINITIONS[current_map_id]["name"]
+	return "Inconnu"
+
+func is_in_safe_zone() -> bool:
+	"""Vérifie si la carte actuelle est une zone sûre"""
+	if MAP_DEFINITIONS.has(current_map_id):
+		return MAP_DEFINITIONS[current_map_id].get("is_safe_zone", false)
+	return false
+
+func get_map_difficulty() -> int:
+	"""Retourne la difficulté de la carte actuelle (0 = safe zone)"""
+	if MAP_DEFINITIONS.has(current_map_id):
+		return MAP_DEFINITIONS[current_map_id].get("difficulty", 0)
+	return 0
