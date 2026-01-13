@@ -1,49 +1,30 @@
-extends Node
+extends Node2D
+
+@onready var map_manager: MapManager = $MapManager
+
+func _ready():
+	# Attendre que tout soit chargé
+	await get_tree().process_frame
+	
+	# Le MapManager s'initialisera tout seul
+	if map_manager:
+		map_manager.initialize()
+	else:
+		push_error("❌ MapManager introuvable!")
+	
+	# Connecter les signaux si nécessaire
+	if map_manager:
+		map_manager.map_changed.connect(_on_map_changed)
+		map_manager.player_needed.connect(_on_player_needed)
+
+func _on_map_changed(map_id: String) -> void:
+	print("📍 Main notifié : nouvelle carte = ", map_id)
+
+func _on_player_needed() -> void:
+	push_error("❌ Le joueur est requis mais introuvable!")
 
 ## Script principal du jeu
 ## Initialise le MapManager et charge la carte de départ
-
-# Références
-@onready var map_manager: MapManager = $MapManager
-var player: CharacterBody2D = null
-
-func _ready():
-	print("=================================")
-	print("🎮 Démarrage du jeu...")
-	print("=================================")
-	
-	# Vérifier que le MapManager existe
-	if not map_manager:
-		push_error("❌ ERREUR CRITIQUE : MapManager introuvable!")
-		push_error("   → Assure-toi qu'un nœud 'MapManager' existe dans la scène main.tscn")
-		return
-	
-	# Initialiser le MapManager (appeler la fonction initialize si elle existe)
-	if map_manager.has_method("initialize"):
-		map_manager.initialize(player)
-	else:
-		print("⚠️ MapManager n'a pas de méthode 'initialize()', on continue...")
-	
-	# Attendre un frame pour que tout soit prêt
-	await get_tree().process_frame
-	
-	# Récupérer le joueur
-	player = get_player_reference()
-	
-	if not player:
-		push_error("❌ ERREUR : Joueur introuvable après initialisation!")
-		return
-	
-	# ✅ CORRECTION : Utiliser "change_map" au lieu de "switch_map"
-	# La fonction s'appelle "change_map", pas "switch_map"
-	if map_manager.has_method("load_initial_map"):
-		map_manager.load_initial_map(player)
-	else:
-		# Alternative : appeler directement change_map
-		map_manager.change_map("ville", player)
-	
-	print("✅ Initialisation terminée!")
-	print("=================================")
 
 func get_player_reference() -> CharacterBody2D:
 	"""Récupère une référence au joueur dans la scène"""

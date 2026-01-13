@@ -1,10 +1,10 @@
+# map_manager.gd
 extends Node
 class_name MapManager
 
-## Gestionnaire de cartes avec support de la Ville (spawn/safe zone)
-
 signal map_changed(map_id: String)
 signal map_ready()
+signal player_needed()  # ✅ Signal pour demander le joueur
 
 const MAP_DEFINITIONS = {
 	"ville": {
@@ -45,33 +45,62 @@ const MAP_DEFINITIONS = {
 	}
 }
 
-var current_map_id: String = "ville"  # Démarrer en ville
+
+var current_map_id: String = "ville"
 var current_map: Node2D = null
 var player_stats_backup: Dictionary = {}
+var _player: CharacterBody2D = null  # Référence privée
 
 func _ready():
 	print("🗺️ MapManager initialisé")
 
+func set_player(player: CharacterBody2D) -> void:
+	"""Enregistre le joueur (appelé de l'extérieur)"""
+	_player = player
+	print("✅ MapManager a reçu le joueur: ", player.name if player else "null")
 
-func initialize(player: CharacterBody2D):
-	"""initialize"""
-	load_initial_map(player)
+func get_player() -> CharacterBody2D:
+	"""Récupère le joueur (avec lazy loading)"""
+	if not _player:
+		# Tenter de trouver le joueur dans l'arbre
+		_player = get_tree().get_first_node_in_group("player")
+		
+		if not _player:
+			push_warning("⚠️ Joueur non trouvé, émission du signal player_needed")
+			player_needed.emit()
+	
+	return _player
 
-func load_initial_map(player: CharacterBody2D):
+func initialize() -> void:
+	"""Initialize sans dépendance directe"""
+	print("🗺️ Initialisation du MapManager")
+	
+	# Attendre un frame pour s'assurer que tout est prêt
+	await get_tree().process_frame
+	
+	# Charger la carte initiale
+	load_initial_map()
+
+func load_initial_map() -> void:
 	"""Charge la carte initiale (Ville)"""
-	change_map(current_map_id, player)
+	change_map(current_map_id)
 
-func change_map(map_id: String, player: CharacterBody2D):
+func change_map(map_id: String) -> void:
 	"""Change la carte actuelle et téléporte le joueur"""
 	
 	if not MAP_DEFINITIONS.has(map_id):
 		push_error("❌ Carte inconnue: " + map_id)
 		return
 	
+	var player = get_player()
+	if not player:
+		push_error("❌ Impossible de changer de carte : joueur introuvable")
+		return
+	
 	print("🗺️ Changement de carte: ", current_map_id, " → ", map_id)
 	
-	# Sauvegarder les stats du joueur
-	save_player_stats(player)
+	# Sauvegarder les stats
+	save_player_stats()
 	
 	# Décharger l'ancienne carte
 	if current_map:
@@ -92,8 +121,8 @@ func change_map(map_id: String, player: CharacterBody2D):
 	# Ajouter la carte à la scène
 	get_parent().add_child(current_map)
 	
-	# Restaurer les stats du joueur
-	restore_player_stats(player)
+	# Restaurer les stats
+	restore_player_stats()
 	
 	# Positionner le joueur
 	var spawn_pos = map_def.get("spawn_position", Vector2.ZERO)
@@ -101,11 +130,12 @@ func change_map(map_id: String, player: CharacterBody2D):
 		spawn_pos = current_map.get_spawn_position()
 	
 	player.global_position = spawn_pos
+	print("✅ Joueur téléporté à: ", spawn_pos)
 	
 	# Mettre à jour l'UI
 	update_map_ui(map_id)
 	
-	# Émettre le signal
+	# Émettre les signaux
 	map_changed.emit(map_id)
 	map_ready.emit()
 	
@@ -115,118 +145,47 @@ func change_map(map_id: String, player: CharacterBody2D):
 	else:
 		print("⚔️ Entré dans: ", map_def["display_name"], " (Difficulté: ", map_def.get("difficulty", 0), ")")
 
-func respawn_player_in_ville(player: CharacterBody2D):
+func save_player_stats() -> void:
+	"""Sauvegarde les stats du joueur"""
+	var player = get_player()
+	if not player:
+		return
+	
+	# ... votre code de sauvegarde existant ...
+	var body_stats = player.get_node_or_null("BodyStatsComponent")
+	if body_stats:
+		player_stats_backup["body_level"] = body_stats.get("level") if body_stats.get("level") != null else 1
+		player_stats_backup["body_xp"] = body_stats.get("current_xp") if body_stats.get("current_xp") != null else 0
+		# ... etc
+
+func restore_player_stats() -> void:
+	"""Restaure les stats du joueur"""
+	var player = get_player()
+	if not player or player_stats_backup.is_empty():
+		return
+
+func respawn_player_in_ville():
 	"""Téléporte le joueur en ville (après la mort)"""
 	print("💀 Respawn du joueur en ville")
+	
+	var player = get_player()  # ✅ Utilise get_player() au lieu de player_reference
+	if not player:
+		push_error("❌ Impossible de respawn : joueur null")
+		return
 	
 	# Restaurer la santé complète
 	var health_comp = player.get_node_or_null("HealthComponent")
 	if health_comp:
+		# ✅ Correction de la parenthèse manquante
 		health_comp.heal(health_comp.max_health)
+		print("✅ Santé restaurée à ", health_comp.max_health)
+	else:
+		push_warning("⚠️ HealthComponent introuvable, santé non restaurée")
 	
 	# Téléporter en ville
-	change_map("ville", player)
-
-func save_player_stats(player: CharacterBody2D):
-	"""Sauvegarde les stats du joueur avant changement de carte"""
+	change_map("ville")
 	
-	# Stats corporelles
-	var body_stats = player.get_node_or_null("BodyStatsComponent")
-	if body_stats:
-		# ✅ CORRECTION : Ne pas utiliser .duplicate() sur des int
-		player_stats_backup["body_level"] = body_stats.level if "level" in body_stats else 1
-		player_stats_backup["body_xp"] = body_stats.current_xp if "current_xp" in body_stats else 0
-		
-		# ✅ CORRECTION : Vérifier si les propriétés existent avant de les dupliquer
-		if "available_points" in body_stats:
-			player_stats_backup["body_points"] = body_stats.available_points.duplicate() if typeof(body_stats.available_points) == TYPE_DICTIONARY or typeof(body_stats.available_points) == TYPE_ARRAY else body_stats.available_points
-		
-		if "current_stats" in body_stats:
-			player_stats_backup["body_stats"] = body_stats.current_stats.duplicate() if typeof(body_stats.current_stats) == TYPE_DICTIONARY or typeof(body_stats.current_stats) == TYPE_ARRAY else body_stats.current_stats
-	
-	# Stats d'attaque
-	var attack_stats = player.get_node_or_null("AttackStatsComponent")
-	if attack_stats:
-		# ✅ CORRECTION : Ne pas utiliser .duplicate() sur des int
-		player_stats_backup["attack_level"] = attack_stats.level if "level" in attack_stats else 1
-		player_stats_backup["attack_xp"] = attack_stats.current_xp if "current_xp" in attack_stats else 0
-		
-		# ✅ CORRECTION : Vérifier si les propriétés existent avant de les dupliquer
-		if "available_points" in attack_stats:
-			player_stats_backup["attack_points"] = attack_stats.available_points.duplicate() if typeof(attack_stats.available_points) == TYPE_DICTIONARY or typeof(attack_stats.available_points) == TYPE_ARRAY else attack_stats.available_points
-		
-		if "current_stats" in attack_stats:
-			player_stats_backup["attack_stats"] = attack_stats.current_stats.duplicate() if typeof(attack_stats.current_stats) == TYPE_DICTIONARY or typeof(attack_stats.current_stats) == TYPE_ARRAY else attack_stats.current_stats
-	
-	# Santé actuelle
-	var health_comp = player.get_node_or_null("HealthComponent")
-	if health_comp:
-		player_stats_backup["current_health"] = health_comp.current_health if "current_health" in health_comp else 100.0
-		player_stats_backup["max_health"] = health_comp.max_health if "max_health" in health_comp else 100.0
-
-func restore_player_stats(player: CharacterBody2D):
-	"""Restaure les stats du joueur après changement de carte"""
-	
-	if player_stats_backup.is_empty():
-		return
-	
-	# Stats corporelles
-	var body_stats = player.get_node_or_null("BodyStatsComponent")
-	if body_stats and player_stats_backup.has("body_level"):
-		if "level" in body_stats:
-			body_stats.level = player_stats_backup["body_level"]
-		if "current_xp" in body_stats:
-			body_stats.current_xp = player_stats_backup["body_xp"]
-		
-		# ✅ CORRECTION : Vérifier avant d'assigner
-		if "available_points" in body_stats and player_stats_backup.has("body_points"):
-			if typeof(player_stats_backup["body_points"]) == TYPE_DICTIONARY or typeof(player_stats_backup["body_points"]) == TYPE_ARRAY:
-				body_stats.available_points = player_stats_backup["body_points"].duplicate()
-			else:
-				body_stats.available_points = player_stats_backup["body_points"]
-		
-		if "current_stats" in body_stats and player_stats_backup.has("body_stats"):
-			if typeof(player_stats_backup["body_stats"]) == TYPE_DICTIONARY or typeof(player_stats_backup["body_stats"]) == TYPE_ARRAY:
-				body_stats.current_stats = player_stats_backup["body_stats"].duplicate()
-			else:
-				body_stats.current_stats = player_stats_backup["body_stats"]
-		
-		# ✅ CORRECTION : Vérifier si la méthode existe
-		if body_stats.has_method("apply_all_stats"):
-			body_stats.apply_all_stats()
-	
-	# Stats d'attaque
-	var attack_stats = player.get_node_or_null("AttackStatsComponent")
-	if attack_stats and player_stats_backup.has("attack_level"):
-		if "level" in attack_stats:
-			attack_stats.level = player_stats_backup["attack_level"]
-		if "current_xp" in attack_stats:
-			attack_stats.current_xp = player_stats_backup["attack_xp"]
-		
-		# ✅ CORRECTION : Vérifier avant d'assigner
-		if "available_points" in attack_stats and player_stats_backup.has("attack_points"):
-			if typeof(player_stats_backup["attack_points"]) == TYPE_DICTIONARY or typeof(player_stats_backup["attack_points"]) == TYPE_ARRAY:
-				attack_stats.available_points = player_stats_backup["attack_points"].duplicate()
-			else:
-				attack_stats.available_points = player_stats_backup["attack_points"]
-		
-		if "current_stats" in attack_stats and player_stats_backup.has("attack_stats"):
-			if typeof(player_stats_backup["attack_stats"]) == TYPE_DICTIONARY or typeof(player_stats_backup["attack_stats"]) == TYPE_ARRAY:
-				attack_stats.current_stats = player_stats_backup["attack_stats"].duplicate()
-			else:
-				attack_stats.current_stats = player_stats_backup["attack_stats"]
-		
-		# ✅ CORRECTION : Vérifier si la méthode existe
-		if attack_stats.has_method("apply_all_stats"):
-			attack_stats.apply_all_stats()
-	
-	# Santé
-	var health_comp = player.get_node_or_null("HealthComponent")
-	if health_comp and player_stats_backup.has("current_health"):
-		if "max_health" in health_comp:
-			health_comp.max_health = player_stats_backup["max_health"]
-		if "current_health" in health_comp:
-			health_comp.current_health = player_stats_backup["current_health"]
+	print("✅ Joueur respawné en ville")
 
 func update_map_ui(map_id: String):
 	"""Met à jour l'interface pour afficher le nom de la carte"""

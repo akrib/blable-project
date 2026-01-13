@@ -1,6 +1,5 @@
 extends CharacterBody2D
-class_name Player
-
+class_name Player  # ✅ Ajouter cette ligne
 ## Entité joueur principale
 ## Utilise des composants modulaires pour toutes ses capacités
 
@@ -16,6 +15,13 @@ class_name Player
 signal player_died()
 
 func _ready():
+	# ✅ S'ajouter au groupe "player" pour être trouvable
+	add_to_group("player")
+	
+	# Notifier le MapManager qu'on est prêt (optionnel)
+	var map_manager = get_tree().get_first_node_in_group("map_manager")
+	if map_manager:
+		map_manager.set_player(self)
 	# Configuration visuelle - blob de couleur changeante selon l'élément
 	visual.color = Color(0.5, 0.8, 0.5)  # Vert blob par défaut
 	attack_visual.visible = false

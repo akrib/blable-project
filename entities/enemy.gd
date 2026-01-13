@@ -69,7 +69,8 @@ func _perform_attack():
 				movement.apply_impulse(knockback)
 
 func _on_detection_area_entered(body):
-	if body is Player:
+	# ✅ Vérifier avec le groupe au lieu du type
+	if body.is_in_group("player"):
 		player_target = body
 		ai_component.set_target(body)
 
